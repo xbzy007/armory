@@ -6,7 +6,7 @@
 
 curtdir=$(cd `dirname $0` && pwd)
 
-source ${curtdir}/../../common/setenv.sh 
+#############source ${curtdir}/../../common/setenv.sh 
 
 genHead() {
 

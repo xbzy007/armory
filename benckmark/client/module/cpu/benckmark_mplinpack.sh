@@ -6,7 +6,7 @@
 
 curtdir=$(cd `dirname $0` && pwd)
 
-. ${curtdir}/../../common/setenv.sh
+#######. ${curtdir}/../../common/setenv.sh
 
 logdir=${Logdir}/cpu
 [ -d ${logdir} ] || mkdir -p ${logdir}

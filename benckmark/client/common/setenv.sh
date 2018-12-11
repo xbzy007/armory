@@ -37,9 +37,10 @@ fi
 
 initworkdir()
 {
-        Logdir=${LogParentDir}/logs
-        Datadir=${LogParentDir}/data
+        export Logdir="${LogParentDir}/logs"
+        export Datadir="${LogParentDir}/data"
         mkdir -p $Logdir $Datadir
+		
 }
 
 initworkdir
