@@ -2,10 +2,10 @@
 
 
 Curtdir=$(cd `dirname $0` && pwd)
-RootDir=${Curtdir%/client*}
+RootDir=${Curtdir}
 ###### LogParentDir 是数据产出路径，client.py 需要读取这个路径，client.py 需要保持一致
 LogParentDir="/tmp/delivery"
-export DIDIVKIT=${RootDir}/client/common
+export DIDIVKIT=${RootDir}/common
 export ARCH=intel64
 export LD_LIBRARY_PATH=${DIDIVKIT}/arch/${ARCH}/lib/:$LD_LIBRARY_PATH
 export PATH=${DIDIVKIT}/arch/${ARCH}/bin:${DIDIVKIT}/arch/${ARCH}/kits:$PATH
@@ -37,12 +37,10 @@ fi
 
 initworkdir()
 {
-        export Logdir="${LogParentDir}/logs"
-        export Datadir="${LogParentDir}/data"
+        export Logdir=${LogParentDir}/logs
+        export Datadir=${LogParentDir}/data
         mkdir -p $Logdir $Datadir
-		
 }
 
 initworkdir
-#env
 

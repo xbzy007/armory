@@ -7,12 +7,11 @@
 
 curtdir=$(cd `dirname $0` && pwd)
 
-######. ${curtdir}/../../common/setenv.sh
+###########. ${curtdir}/../../common/setenv.sh
 
 
 logdir=${Logdir}/cpu
 datadir="${Datadir}/cpu"
-rm -fr ${logdir} ${datadir}
 [ -d ${datadir} ] || mkdir -p ${datadir}
 [ -d ${logdir} ] || mkdir -p ${logdir}
 EXE=${DIDIVKIT}/arch/${ARCH}/kits/sjeng
@@ -35,4 +34,7 @@ TEND=`date +%s`
 
 grep '%' ${logdir}/TMP_Sjeng_*/time.*.out
 res=$(echo $((TEND - TBEGIN)) | awk '{printf "%.03f\n", ($1 * 1.00) /"'$NLCPU'" }')
+if [ -z "${res}" ];then
+    res=-1
+fi
 echo -e "cpu\tcpu_sjeng\t${res}" |tee ${datadir}/bk_cpu_sjeng

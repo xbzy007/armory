@@ -4,7 +4,7 @@ curtdir=$(cd `dirname $0` && pwd)
 . ${curtdir}/common/setenv.sh
 
 
-sysinfolog="SysInfo"
+sysinfolog="system_info"
 
 logfile="${curtdir}/benchmark.log"
 modulefile="${curtdir}/module"

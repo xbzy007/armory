@@ -5,7 +5,7 @@
 #########################
 curtdir=$(cd `dirname $0` && pwd)
 
-#########. ${curtdir}/../../common/setenv.sh
+############### ${curtdir}/../../common/setenv.sh
 
 
 EXE=${DIDIVKIT}/arch/${ARCH}/kits/stream.icc17.avx2

@@ -6,7 +6,7 @@
 
 curtdir=$(cd `dirname $0` && pwd)
 
-#############source ${curtdir}/../../common/setenv.sh 
+##############source ${curtdir}/../../common/setenv.sh 
 
 genHead() {
 
@@ -106,7 +106,7 @@ formatdatatofile()
         iops=$(awk -v iops_read=${iops_read} -v iops_write=${iops_write} 'BEGIN{printf "%.2f\n",iops_read + iops_write}')
        
         if [ -z "${bw}" ];then
-            bw=0
+            bw=-1
         elif [ -z "${iops}" ];then
             iops=-1
         fi

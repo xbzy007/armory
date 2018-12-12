@@ -223,7 +223,7 @@ class NetWork_Benchmark(object):
         netdatadir = DataDir + '/' +'network'
         if not os.path.exists(netdatadir): 
             os.makedirs(netdatadir)
-        filename = 'bk_netthroughput'
+        filename = 'bk_network_bw'
         filepath = netdatadir + '/' + filename
         with open(filepath, 'w') as f:
             content = "network\t" + "network\t" + str(netres) + "\n"
@@ -236,8 +236,8 @@ class HandleData(object):
         self.server = server
         self.port = port
         self.netservertype = netservertype
-        #self.devicelist = ['cpu', 'memory', 'network', 'disk']
-        self.devicelist = ['memory','network']
+        self.devicelist = ['cpu', 'memory', 'network', 'disk']
+        #self.devicelist = ['memory','network']
 
     def run_one_task(self, devicename):
         currentdir = os.path.dirname(os.path.realpath(__file__))
@@ -340,6 +340,29 @@ class HandleData(object):
             except:
                 logger.error("connecting to server failed!, cann't send data")
                 sleep(5)
+
+class Watcher():
+
+    def __init__(self):
+        self.child = os.fork()
+        if self.child == 0:
+            return
+        else:
+            self.watch()
+
+    def watch(self):
+        try:
+            os.wait()
+        except KeyboardInterrupt:
+            self.kill()
+        sys.exit()
+
+    def kill(self):
+        try:
+            os.kill(self.child, signal.SIGKILL)
+        except OSError:
+            pass
+
 
 
 def send_hart(pinstance, host, port, delay, token):
@@ -446,4 +469,5 @@ def main(argv):
 
 if __name__ == '__main__':
     DataDir = '/tmp/delivery/data'
+    Watcher()
     main(sys.argv[1:])

@@ -1,2 +1,0 @@
-# armory
-devops some scripts
