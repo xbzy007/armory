@@ -86,8 +86,8 @@ formatdatatofile()
         dictdisk["${devname}"]=${i}
     done
     ### 清理文件
-    [ -f ${datadir}/${bwfile} ] && rm -f ${datadir}/${bwfile}
-    [ -f ${datadir}/${iopsfile} ] && rm -f ${datadir}/${iopsfile}
+    [ -f ${datadir_disk_bw}/${bwfile} ] && rm -f ${datadir_disk_bw}/${bwfile}
+    [ -f ${datadir_disk_iops}/${iopsfile} ] && rm -f ${datadir_disk_iops}/${iopsfile}
     
     #### 从测试输出的文件中获取 每个磁盘的字典的位置
     for ((i=0;i<${#diskinfo_arr[@]};i++))
@@ -110,8 +110,8 @@ formatdatatofile()
         elif [ -z "${iops}" ];then
             iops=-1
         fi
-        echo -e "${diskinfo_arr[i]}\t${bwfile}\t${bw}"| tee -a  ${datadir}/${bwfile}
-        echo -e "${diskinfo_arr[i]}\t${iopsfile}\t${iops}"| tee -a  ${datadir}/${iopsfile}
+        echo -e "${diskinfo_arr[i]}\t${bwfile}\t${bw}"| tee -a  ${datadir_disk_bw}/${bwfile}
+        echo -e "${diskinfo_arr[i]}\t${iopsfile}\t${iops}"| tee -a  ${datadir_disk_iops}/${iopsfile}
    done
 }
 
@@ -126,11 +126,14 @@ main()
     fi
     
     
-    datadir=${Datadir}/disk
+    datadir_disk_bw=${Datadir}/disk_bw
+    datadir_disk_iops=${Datadir}/disk_iops
+
     logdir=${Logdir}/disk
     info="DISKINFO"
     [ -f ${datadir}/${info} ] && rm -f ${datadir}/${info}
-    [ -d ${datadir} ] || mkdir -p ${datadir}
+    [ -d ${datadir_disk_bw} ] || mkdir -p ${datadir_disk_bw}
+    [ -d ${datadir_disk_iops} ] || mkdir -p ${datadir_disk_iops}
     [ -d ${logdir} ] || mkdir -p ${logdir}
     
     FNAME="fio_ini.ini"

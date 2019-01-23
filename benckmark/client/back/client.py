@@ -15,7 +15,6 @@ import socket
 import json
 import signal
 import contextlib
-import argparse
 
 sys.path.append("%s/common" % os.path.dirname(os.path.abspath(__file__)))
 import xlogging
@@ -73,8 +72,7 @@ class NetWork_Benchmark(object):
     ######### 这里要确保已经安装了 iperf 
     #@contextlib.contextmanager
     def start_iperf_server(self):
-        #proc = subprocess.Popen("iperf -s",shell=True,stdout=subprocess.PIPE, preexec_fn=os.setsid)
-        proc = subprocess.Popen("iperf3 -s -4",shell=True, stdout=subprocess.PIPE, preexec_fn=os.setsid)
+        proc = subprocess.Popen("iperf -s",shell=True,stdout=subprocess.PIPE, preexec_fn=os.setsid)
      #   try:
      #       yield
      #   finally:
@@ -119,7 +117,7 @@ class NetWork_Benchmark(object):
             if runtimes_tags > 6 :
                 SameRack = 'no'
 
-            if runtimes_tags > 50 :
+            if runtimes_tags > 20 :
                 value_list.append(-1)
                 break
 
@@ -154,42 +152,34 @@ class NetWork_Benchmark(object):
                 connected_iplist.append(server_host)
                 ########## 失败会中断？？？？？？
                 try :
-                    res = subprocess.Popen("iperf3 -c {0} -t {1} -J".format(server_host,transmit_time),close_fds=True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE,shell=True)
+                    #res = subprocess.Popen("iperf -c {0} -t {1} -y c".format(server_host,transmit_time),shell=True,close_fds=True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+                    res = subprocess.Popen("echo {0},{1}".format(server_host,transmit_time),shell=True,close_fds=True, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
                     res.wait()
                     res_stderr = res.stderr.read()
                     res_stdout = res.stdout.read()
                     logger.info("the res is {0},{1}".format(res_stderr,res_stdout))
                 except :
                     pass
-
                 if res_stderr and not res_stdout :
                     runtimes_tags += 1
                     logger.error("connted to iperf server faild !")
                     ######### 失败后也要归还资源
-                    data = {
-                        "iperf": "tag",
-                        "iplist": [],
-                        "status": 'False',
-                        "reqtype": "",
-                        "samerack": SameRack
-                    }
+                    data = json.loads(data)
                     send_iplist.append(server_host)
                     send_iplist.append(self.myip)
                     data['iplist'] = send_iplist
                     data['reqtype'] = "put"
                     data = json.dumps(data)
-                    logger.error("network task failed, send to server is : {0}".format(data))
+                    ##### 虽然失败 也是要上交已经拿到的资源的，以便其他的机器测试
+                    logger.warn("network task failed, send to server is : {}".format(data))
                     s.sendall(data)
-                    sleep(5)
                     continue
                 if not res_stderr and res_stdout :
                     netdata = res_stdout
                     logger.info("the netdata is {0}".format(netdata))
                 try:
-                    sum_sent = netdata['end']['sum_sent']['bits_per_second']
-                    sum_received = netdata['end']['sum_received']['bits_per_second']
-                    sum_sent_list.append(sum_sent)
-                    sum_received_list.append(sum_sent)
+                    value = netdata.split(',')[-1]
+                    value_list.append(value)
                     data = json.loads(data)
                     send_iplist.append(server_host)
                     send_iplist.append(self.myip)
@@ -221,28 +211,20 @@ class NetWork_Benchmark(object):
 
         ### 求测试结果求多次中的最大值
         ### 判断三次测试是否全完成
-        netres_dict = {}
         if success_runtimes == 0 :
-            send_list = []
-            recv_list = []
-            send_list = [ int(i) for i in sum_send_list ]
-            recv_list = [ int(i) for i in sum_received_list ]
-            netres_send = max(send_list)
-            netres_recv = max(recv_list)
-            netres_dict['send_bw'] = netres_send
-            netres_dict['recv_bw'] = netres_recv
+            reslist = []
+            reslist = [ int(i) for i in value_list ]
+            netres = max(reslist)
         else :
-            netres_dict['send_bw'] = -1
-            netres_dict['recv_bw'] = -1
-        send_iplist = []
+            netres = -1
+
         data = {
             "iperf": "tag",
             "sertype": netservertype,
             "iplist": [],
             "status": ""
         }
-        data['netres_recv'] = netres_recv
-        data['netres_send'] = netres_send
+        data['netres'] = netres
         data['status'] = "True"
         data['reqtype'] = "put"
         send_iplist.append(self.myip)
@@ -260,19 +242,18 @@ class NetWork_Benchmark(object):
         filename = 'bk_network_bw'
         filepath = netdatadir + '/' + filename
         with open(filepath, 'w') as f:
-            for item, value in netres_dict.items():
-                content = "{0}\t" + "network\t" + str({1}) + "\n".format(item, value)
-                f.write(content)
+            content = "network\t" + "network\t" + str(netres) + "\n"
+            f.write(content)
 
 
 class HandleData(object):
 
-    def __init__(self, server, port, netservertype, device):
+    def __init__(self, server, port, netservertype):
         self.server = server
         self.port = port
         self.netservertype = netservertype
-        ############ "disk" 作为参数会传到执行脚本， 测试生成disk_bw,disk_iops
-        self.devicelist = device
+        #self.devicelist = ['cpu', 'memory', 'network', 'disk']
+        self.devicelist = ['network']
 
     def run_one_task(self, devicename):
         currentdir = os.path.dirname(os.path.realpath(__file__))
@@ -296,28 +277,20 @@ class HandleData(object):
         for device in self.devicelist :
             logger.info("run {0} task".format(device))
             if device == 'network' :
-                try:
-                    self.run_net_task()
-                except:
-                    logger.error("run {0} task failed, function comtinue".format(device))
-                    continue
+                self.run_net_task()
             else:
-                try:
-                    self.run_one_task(device)
-                except:
-                    continue
+                self.run_one_task(device)
 
 
 
     def readdata(self):
-        ### run benckmark task
         self.run_all_task()
         sleep(3)
         alldevdict = {}
 
         rootdirpath = DataDir
-        #### 定义数据的目录列表, 这里可以直接获取data 下的所有目录名字
-        dirslist = ['cpu', 'memory', 'network', 'disk_bw', 'disk_iops']
+        #### 获取结果数据的路径与之前定义的测试设备对应
+        dirslist = self.devicelist 
 
         def file_name(dirpath):
             files = []
@@ -344,7 +317,6 @@ class HandleData(object):
                             ###  判断 value 是否为数字
                             try:
                                 value = float(value)
-                                value = round(value,2)
                             except:
                                 value = 0
                             devdict[devname] = value
@@ -364,14 +336,6 @@ class HandleData(object):
         global hadruntimes
         xbzy = hostinfo()
         ip = xbzy.gethostip()
-        ### 探测服务端连接，连接不可用，退出线程
-        try:
-            ds = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            ds.connect((self.server, self.port))
-            sleep(1)
-        except:
-            logger.error("connecting to server failed!, cann't continue")
-            sys.exit(-1)
 
         for i in range(0, runtimes):
             resdict =  self.readdata()
@@ -417,7 +381,7 @@ class Watcher():
 
 
 
-def send_hart(process_object,host, port, delay, token):
+def send_hart(pinstance, host, port, delay, token):
     global clien_id
     hdata = {}
     xbzy = hostinfo()
@@ -431,42 +395,48 @@ def send_hart(process_object,host, port, delay, token):
     check_tag = 0
     while True:
         logger.info("client: {0} report to server...".format(clien_id))
-        if not process_object.isAlive():
+        if not pinstance.isAlive():
             check_tag += 1
         if check_tag > 3 :
-            logger.info("main process exit, heartbeat will to exit")
-            sys.exit(0)
-        try:
-            logger.info("{0} send heartbeat data to server".format(clien_id))
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((host, port))
-            s.sendall(hdata)
-        except:
-            logger.error("Heartbeat process cann't connect to server")
-            sys.exit(-2)
+            logger.info("Heartbeat process done, will to exit")
+            #sys.exit(0)
+        else:
+            try:
+                logger.info("{0} send heartbeat data to server".format(clien_id))
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.connect((host, port))
+                s.sendall(hdata)
+            except:
+                logger.error("Heartbeat process cann't connect to server")
+                sys.exit(-2)
         sleep(delay)
 
 
-def main():
+def main(argv):
     mode = ''
     server = ''
     token = ''
-    device = []
     netservertype = ''
-    args = argparse.ArgumentParser(description = 'Help Information ',epilog = 'Information end ')
-    args.add_argument("-m","--mode", type = str, dest = 'mode',  help = "run mode: local/online",required = True)
-    args.add_argument("-s","--server", type = str, dest = 'server',  help = "server address",required = True)
-    args.add_argument("-t","--token", type = str, dest = 'token',  help = "token",required = True)
-    args.add_argument('-n', action='store_const', dest='netservertype',const=True, help='set network benckmark type')
-    args.add_argument("-d","--device", type = str, dest = 'device', help = "device name", required = False, default = ['cpu', 'memory', 'network', 'disk'], nargs = '*')
+    try:
+        opts, args = getopt.getopt(argv,"hm:s:t:n",["mode=", "server=", "token=", "nettype"])
+    except getopt.GetoptError:
+        logger.info("-m < local/online > -s < server ip >")
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            logger.info("args : -m < local/online >  -s < server ip >  -t < token >")
+            sys.exit(0)
+        elif opt in ("-m", "--mode"):
+            mode = arg
 
-    args = args.parse_args()
-    print "argparse.args=",args,type(args)
-    mode = args.mode
-    server = args.server
-    token = args.token
-    device = args.device
-    netservertype = args.netservertype
+        elif opt in ("-s", "--server"):
+            server = arg
+
+        elif opt in ("-n", "--nettype"):
+            netservertype = "singlemode"
+
+        elif opt in ("-t", "--token"):
+            token = arg
 
     global hadruntimes
 
@@ -484,7 +454,7 @@ def main():
         netservertype = 'peer'
 
     if mode in ['online', 'local'] :
-        hdata = HandleData(server, port, netservertype, device)
+        hdata = HandleData(server, port, netservertype)
         if mode == 'online' :
             if not server or not token:
                 logger.warn("need : -s < server ip > -t < token >")
@@ -493,7 +463,7 @@ def main():
             #函数名字已经改变 重新写如下代码
             xiperf = NetWork_Benchmark()
             iperf_server = threading.Thread(target=xiperf.start_iperf_server,args=())
-            threads.append(iperf_server)
+            #threads.append(iperf_server)
 
             TData = threading.Thread(target=hdata.senddata, args=(runtimes, token))
             #print type(TData)
@@ -511,10 +481,10 @@ def main():
         logger.info("all process done")
 
     else:
-        helpinfo()
+        logger.info("args : -m < local/online >  -s < server ip >  -t < token > -n")
 
 
 if __name__ == '__main__':
     DataDir = '/tmp/delivery/data'
     Watcher()
-    main()
+    main(sys.argv[1:])

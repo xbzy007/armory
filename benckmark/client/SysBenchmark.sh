@@ -39,7 +39,7 @@ action="$1"
 case $action in
     memory)
     ##### 内存带宽
-    sh ${modulefile}/mem/benckmark_stream.sh &>> $logfile && sleep 10
+    sh ${modulefile}/memory/benckmark_stream.sh &>> $logfile && sleep 10
     ;;
 
     cpu)
@@ -52,8 +52,8 @@ case $action in
     ;;
 
     disk)
-    #磁盘带宽
-    runtime=60
+    #磁盘带宽/iops
+    runtime=600
     sleep_interval=20
     FioType=('read' 'randread' 'write' 'randwrite')
     BsType=('4K' '1M')
